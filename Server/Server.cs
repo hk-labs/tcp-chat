@@ -43,9 +43,15 @@ namespace Server
         {
             while (!_stop)
             {
-                var acceptedSocket = _listeningSocket.Accept();
-
-                ClientConnected?.Invoke(this, new ClientConnectedEventArgs(acceptedSocket));
+                try
+                {
+                    var acceptedSocket = _listeningSocket.Accept();
+                    ClientConnected?.Invoke(this, new ClientConnectedEventArgs(acceptedSocket));
+                }
+                catch (Exception ex)
+                {
+                    break;
+                }
             }
         }
     }

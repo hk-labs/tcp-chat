@@ -1,13 +1,13 @@
-﻿using System;
+﻿using ChatProtocol;
+using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 namespace Client
 {
-    public class Program
+    public static class Program
     {
-        public static void Main(string[] args)
+        public static void Main()
         {
             Console.WindowHeight = 10;
 
@@ -30,8 +30,7 @@ namespace Client
                 var clientMessageListener = new ClientMessageListener(clientSocket);
                 clientMessageListener.Start();
 
-                var bytes = Encoding.UTF8.GetBytes(name);
-                clientSocket.Send(bytes);
+                Send(clientSocket, new JoinChat(name));
 
                 Console.WriteLine("Start typing and press enter to send message...");
 
@@ -45,11 +44,41 @@ namespace Client
                         break;
                     }
 
-                    bytes = Encoding.UTF8.GetBytes(text);
+                    ChatPDU chatPdu;
+                    if (text.Contains(":"))
+                    {
+                        var parts = text.Split(':');
+                        var target = parts[0];
+                        var message = parts[1];
+                        chatPdu = new PrivateMessage(name, target, message);
+                    }
+                    else
+                    {
+                        chatPdu = new PublicMessage(name, text);
+                    }
 
-                    clientSocket.Send(bytes);
+                    Send(clientSocket, chatPdu);
                 }
             }
+        }
+
+        private static void Send(Socket socket, ChatPDU chatPdu)
+        {
+            var bytes = chatPdu.Serialize();
+
+            try
+            {
+                var position = 0;
+                do
+                {
+                    position += socket.Send(bytes, position, bytes.Length - position, SocketFlags.None);
+                } while (position < bytes.Length);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
         }
     }
 }

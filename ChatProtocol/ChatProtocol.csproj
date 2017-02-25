@@ -4,17 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A50AA78F-23EA-4D20-BD01-05DCF484AFE4}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{1D83282F-1A4A-4E6A-BA77-30CB864C3D68}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Server</RootNamespace>
-    <AssemblyName>Server</AssemblyName>
+    <RootNamespace>ChatProtocol</RootNamespace>
+    <AssemblyName>ChatProtocol</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,7 +22,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -43,19 +40,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClientChannel.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="ChatPDU.cs" />
+    <Compile Include="ClientJoinedChat.cs" />
+    <Compile Include="ClientLeftChat.cs" />
+    <Compile Include="IncomingMessage.cs" />
+    <Compile Include="JoinChat.cs" />
+    <Compile Include="BadMessageException.cs" />
+    <Compile Include="PDUParser.cs" />
+    <Compile Include="PrivateMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Server.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ChatProtocol\ChatProtocol.csproj">
-      <Project>{1d83282f-1a4a-4e6a-ba77-30cb864c3d68}</Project>
-      <Name>ChatProtocol</Name>
-    </ProjectReference>
+    <Compile Include="PublicMessage.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

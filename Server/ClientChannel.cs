@@ -1,6 +1,6 @@
-﻿using System;
+﻿using ChatProtocol;
+using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace Server
@@ -13,9 +13,11 @@ namespace Server
         private readonly Thread _thread;
         private bool _stop;
         private bool _authorized;
+        private readonly PDUParser _parser = new PDUParser();
 
-        public event EventHandler<ClientSendMessageEventArgs> ClientSentMessage;
-        public event EventHandler<ClientAuthorizedEventArgs> ClientAuthorized;
+        public event EventHandler<PublicMessage> ClientSentPublicMessage;
+        public event EventHandler<PrivateMessage> ClientSentPrivateMessage;
+        public event EventHandler<JoinChat> ClientJoined;
         public event EventHandler ClientDisconnected;
 
         public ClientChannel(Socket socket)
@@ -47,24 +49,31 @@ namespace Server
                     if (readCount == 0)
                         break;
 
-                    var message = Encoding.UTF8.GetString(buffer, 0, readCount);
+                    _parser.AddChunk(buffer, readCount);
 
-                    if (!_authorized)
+                    ChatPDU chatPdu;
+                    while (_parser.TryParse(out chatPdu))
                     {
-                        Name = message;
-                        ClientAuthorized?.Invoke(this, new ClientAuthorizedEventArgs(Name));
-                        _authorized = true;
-                    }
-                    else if (message.IndexOf(':') == -1)
-                    {
-                        ClientSentMessage?.Invoke(this, new ClientSendMessageEventArgs(Name, message));
-                    }
-                    else
-                    {
-                        var parts = message.Split(':');
-                        var targetClient = parts[0];
+                        var joinChat = chatPdu as JoinChat;
+                        if (joinChat != null)
+                        {
+                            Name = joinChat.Name;
+                            ClientJoined?.Invoke(this, joinChat);
+                            _authorized = true;
+                        }
 
-                        ClientSentMessage?.Invoke(this, new ClientSendMessageEventArgs(Name, targetClient, parts[1]));
+                        var publicMessage = chatPdu as PublicMessage;
+                        if (publicMessage != null)
+                        {
+                            ClientSentPublicMessage?.Invoke(this, publicMessage);
+                        }
+
+                        var privateMessage = chatPdu as PrivateMessage;
+                        if (privateMessage != null)
+                        {
+                            ClientSentPrivateMessage?.Invoke(this, privateMessage);
+                        }
+
                     }
                 }
                 catch (Exception ex)
@@ -76,19 +85,24 @@ namespace Server
                 Thread.Sleep(1);
             }
 
-            ClientDisconnected?.Invoke(this, EventArgs.Empty);
+            if (_authorized)
+                ClientDisconnected?.Invoke(this, EventArgs.Empty);
         }
 
-        public void Send(string message)
+        public void Send(ChatPDU pdu)
         {
-            if (message == null)
-                throw new ArgumentNullException(nameof(message));
+            if (pdu == null)
+                throw new ArgumentNullException(nameof(pdu));
 
-            var bytes = Encoding.UTF8.GetBytes(message);
+            var bytes = pdu.Serialize();
 
             try
             {
-                Socket.Send(bytes);
+                var position = 0;
+                do
+                {
+                    position += Socket.Send(bytes, position, bytes.Length - position, SocketFlags.None);
+                } while (position < bytes.Length);
             }
             catch (Exception ex)
             {

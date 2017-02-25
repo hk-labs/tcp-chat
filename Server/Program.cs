@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ChatProtocol;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -6,11 +7,11 @@ using System.Net.Sockets;
 
 namespace Server
 {
-    public class Program
+    public static class Program
     {
         private static readonly IList<ClientChannel> Clients = new List<ClientChannel>();
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             Console.WindowHeight = 10;
 
@@ -37,63 +38,62 @@ namespace Server
         {
             Console.WriteLine($"Client '{args.Socket.RemoteEndPoint}' connected");
 
-            var acceptedClient = new ClientChannel(args.Socket);
-            acceptedClient.ClientAuthorized += OnClientAuthorized;
-            acceptedClient.ClientSentMessage += OnClientSentMessage;
-            acceptedClient.ClientDisconnected += OnClientDisconnected;
+            var clientChannel = new ClientChannel(args.Socket);
+            clientChannel.ClientJoined += OnClientJoined;
+            clientChannel.ClientSentPublicMessage += OnClientSentPublicMessage;
+            clientChannel.ClientSentPrivateMessage += OnClientSentPrivateMessage;
+            clientChannel.ClientDisconnected += OnClientDisconnected;
 
-            Clients.Add(acceptedClient);
+            Clients.Add(clientChannel);
 
-            acceptedClient.Start();
+            clientChannel.Start();
         }
 
-        private static void OnClientSentMessage(object sender, ClientSendMessageEventArgs args)
+        private static void OnClientSentPublicMessage(object sender, PublicMessage message)
         {
-            var message = $"{args.SourceClient}:{args.Message}";
-
-            if (args.TargetClient == ClientSendMessageEventArgs.AllClients)
-            {
-                foreach (var client in Clients.Where(c => c != sender))
-                {
-                    client.Send(message);
-                }
-            }
-            else
-            {
-                var targetClient = Clients.FirstOrDefault(c => c.Name == args.TargetClient);
-                if (targetClient == null)
-                {
-                    Console.WriteLine($"Cannot find '{args.TargetClient}' client");
-                    return;
-                }
-
-                targetClient.Send(message);
-            }
-        }
-
-        private static void OnClientAuthorized(object sender, ClientAuthorizedEventArgs args)
-        {
-            var message = $"server:client {args.Client} has joined chat";
+            var incomingMessage = new IncomingMessage(message.Source, message.Message);
 
             foreach (var client in Clients.Where(c => c != sender))
             {
-                client.Send(message);
+                client.Send(incomingMessage);
+            }
+        }
+
+        private static void OnClientSentPrivateMessage(object sender, PrivateMessage message)
+        {
+            var targetClient = Clients.FirstOrDefault(c => c.Name == message.Target);
+            if (targetClient == null)
+            {
+                Console.WriteLine($"Cannot find '{message.Target}' client");
+                return;
+            }
+
+            targetClient.Send(new IncomingMessage(message.Source, message.Message));
+        }
+
+        private static void OnClientJoined(object sender, JoinChat message)
+        {
+            var clientJoined = new ClientJoinedChat(message.Name);
+
+            foreach (var client in Clients.Where(c => c != sender))
+            {
+                client.Send(clientJoined);
             }
         }
 
         private static void OnClientDisconnected(object sender, EventArgs args)
         {
-            var acceptedClient = (ClientChannel)sender;
-            Clients.Remove(acceptedClient);
+            var clientChannel = (ClientChannel)sender;
+            Clients.Remove(clientChannel);
 
-            var message = $"server:client {acceptedClient.Name} has left chat";
+            var message = new ClientLeftChat(clientChannel.Name);
 
             foreach (var client in Clients)
             {
                 client.Send(message);
             }
 
-            Console.WriteLine($"Client '{acceptedClient.Socket.RemoteEndPoint}' disconnected");
+            Console.WriteLine($"Client '{clientChannel.Socket.RemoteEndPoint}' disconnected");
         }
     }
 }

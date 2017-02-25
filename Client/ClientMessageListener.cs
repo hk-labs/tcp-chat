@@ -1,6 +1,6 @@
-﻿using System;
+﻿using ChatProtocol;
+using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace Client
@@ -10,6 +10,8 @@ namespace Client
         private readonly Socket _socket;
         private readonly Thread _thread;
         private bool _stop;
+
+        private readonly PDUParser _parser = new PDUParser();
 
         public ClientMessageListener(Socket socket)
         {
@@ -41,9 +43,32 @@ namespace Client
                 {
                     var readBytes = _socket.Receive(buffer);
 
-                    var receivedMessage = Encoding.UTF8.GetString(buffer, 0, readBytes);
+                    if (readBytes == 0)
+                        return;
 
-                    Console.WriteLine($"{receivedMessage}");
+                    _parser.AddChunk(buffer, readBytes);
+
+                    ChatPDU chatPdu;
+                    while (_parser.TryParse(out chatPdu))
+                    {
+                        var clientJoined = chatPdu as ClientJoinedChat;
+                        if (clientJoined != null)
+                        {
+                            Console.WriteLine($"Client {clientJoined.Name} has joined chat");
+                        }
+
+                        var clientLeft = chatPdu as ClientLeftChat;
+                        if (clientLeft != null)
+                        {
+                            Console.WriteLine($"Client {clientLeft.Name} has left chat");
+                        }
+
+                        var incomingMessage = chatPdu as IncomingMessage;
+                        if (incomingMessage != null)
+                        {
+                            Console.WriteLine($"{incomingMessage.Source}: {incomingMessage.Message}");
+                        }
+                    }
                 }
 
                 Thread.Sleep(1);
