@@ -73,7 +73,6 @@ namespace Server
                         {
                             ClientSentPrivateMessage?.Invoke(this, privateMessage);
                         }
-
                     }
                 }
                 catch (Exception ex)
@@ -107,18 +106,6 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-            }
-        }
-
-        public void Close()
-        {
-            try
-            {
-                Socket.Close();
-            }
-            catch
-            {
-                // ignored
             }
         }
     }

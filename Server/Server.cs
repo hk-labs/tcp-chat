@@ -48,7 +48,7 @@ namespace Server
                     var acceptedSocket = _listeningSocket.Accept();
                     ClientConnected?.Invoke(this, new ClientConnectedEventArgs(acceptedSocket));
                 }
-                catch (Exception ex)
+                catch
                 {
                     break;
                 }
