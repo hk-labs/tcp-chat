@@ -27,10 +27,10 @@ namespace Client
 
                 Console.Title = name;
 
+                Send(clientSocket, new JoinChat(name));
+
                 var clientMessageListener = new ClientMessageListener(clientSocket);
                 clientMessageListener.Start();
-
-                Send(clientSocket, new JoinChat(name));
 
                 Console.WriteLine("Start typing and press enter to send message...");
 
